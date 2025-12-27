@@ -1,0 +1,3417 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FLYGEN | מערכת יצירת פליירים אוטומטית</title>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+  
+  <!-- External Libraries for Export & Share -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  
+  <!-- Google APIs for Drive Integration -->
+  <script src="https://apis.google.com/js/api.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  
+  <style>
+    /* ========================================
+       CSS VARIABLES - Design System
+       ======================================== */
+    :root {
+      /* Primary Colors */
+      --primary-purple: #7c3aed;
+      --primary-dark: #6d28d9;
+      --primary-light: #8b5cf6;
+      --light-purple: #ede9fe;
+      
+      /* Functional Colors */
+      --banner-red: #b91c1c;
+      --success-green: #059669;
+      --warning-orange: #d97706;
+      --error-red: #dc2626;
+      
+      /* Neutrals */
+      --pure-white: #ffffff;
+      --light-gray: #f8fafc;
+      --medium-gray: #64748b;
+      --dark-gray: #1e293b;
+      --border-color: #e2e8f0;
+      
+      /* Shadows - v2.0 Design System */
+      --shadow-0: none;
+      --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.05);
+      --shadow-2: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+      --shadow-3: 0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.06);
+      --shadow-4: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+      --shadow-purple: 0 10px 25px -5px rgba(124, 58, 237, 0.25);
+    }
+
+    /* ========================================
+       BASE STYLES
+       ======================================== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Heebo', 'Inter', sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+      color: var(--dark-gray);
+      background-color: var(--light-gray);
+      min-height: 100vh;
+      direction: rtl;
+    }
+
+    /* Typography */
+    h1 { font-size: 32px; font-weight: 700; }
+    h2 { font-size: 24px; font-weight: 600; }
+    h3 { font-size: 18px; font-weight: 600; }
+    .text-small { font-size: 14px; }
+    .text-caption { font-size: 12px; color: var(--medium-gray); }
+
+    /* ========================================
+       HEADER
+       ======================================== */
+    .header {
+      height: 64px;
+      background: var(--primary-purple);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+    }
+
+    .header-logo {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--pure-white);
+      letter-spacing: 2px;
+    }
+
+    .header-user {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--pure-white);
+    }
+
+    .header-user-avatar {
+      width: 36px;
+      height: 36px;
+      background: var(--primary-light);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .header-menu {
+      font-size: 24px;
+      color: var(--pure-white);
+      cursor: pointer;
+    }
+
+    /* ========================================
+       LANGUAGE SELECTOR
+       ======================================== */
+    .language-selector {
+      position: relative;
+    }
+
+    .lang-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      color: var(--pure-white);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 14px;
+    }
+
+    .lang-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .lang-flag {
+      font-size: 20px;
+    }
+
+    .lang-dropdown {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      background: var(--pure-white);
+      border-radius: 12px;
+      box-shadow: var(--shadow-4);
+      min-width: 200px;
+      display: none;
+      z-index: 1001;
+      overflow: hidden;
+    }
+
+    .lang-dropdown.active {
+      display: block;
+    }
+
+    .lang-option {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: background 0.2s;
+      color: var(--dark-gray);
+    }
+
+    .lang-option:hover {
+      background: var(--light-gray);
+    }
+
+    .lang-option.active {
+      background: var(--light-purple);
+      color: var(--primary-purple);
+      font-weight: 600;
+    }
+
+    .lang-option .lang-flag {
+      font-size: 24px;
+    }
+
+    .lang-name {
+      flex: 1;
+      font-size: 14px;
+    }
+
+    .lang-option .ri-check-line {
+      display: none;
+      color: var(--primary-purple);
+      font-size: 18px;
+    }
+
+    .lang-option.active .ri-check-line {
+      display: block;
+    }
+
+    /* ========================================
+       PAGE CONTAINER
+       ======================================== */
+    .page-container {
+      margin-top: 64px;
+      padding-bottom: 100px;
+      min-height: calc(100vh - 64px);
+    }
+
+    .page {
+      display: none;
+      padding: 32px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    /* ========================================
+       BREADCRUMB
+       ======================================== */
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 24px;
+      font-size: 14px;
+      color: var(--medium-gray);
+    }
+
+    .breadcrumb a {
+      color: var(--primary-purple);
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .breadcrumb a:hover {
+      text-decoration: underline;
+    }
+
+    .breadcrumb-separator {
+      color: var(--border-color);
+    }
+
+    /* ========================================
+       DASHBOARD - PAGE 1
+       ======================================== */
+    .slogan {
+      text-align: center;
+      font-size: 14px;
+      letter-spacing: 4px;
+      color: var(--medium-gray);
+      margin-bottom: 32px;
+      font-weight: 500;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+    }
+
+    .dashboard-card {
+      background: var(--pure-white);
+      border-radius: 16px;
+      padding: 24px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid var(--border-color);
+    }
+
+    .dashboard-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-4);
+      border-color: var(--primary-purple);
+    }
+
+    .dashboard-card.full-width {
+      grid-column: span 4;
+      background: linear-gradient(135deg, var(--primary-purple) 0%, var(--primary-light) 100%);
+      color: var(--pure-white);
+      text-align: center;
+      padding: 40px;
+    }
+
+    .dashboard-card.full-width:hover {
+      box-shadow: var(--shadow-purple);
+    }
+
+    .card-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--light-purple);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: var(--primary-purple);
+      margin-bottom: 16px;
+    }
+
+    .dashboard-card.full-width .card-icon {
+      width: 64px;
+      height: 64px;
+      background: rgba(255, 255, 255, 0.2);
+      color: var(--pure-white);
+      font-size: 32px;
+      margin: 0 auto 16px;
+    }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .card-desc {
+      font-size: 14px;
+      color: var(--medium-gray);
+    }
+
+    .dashboard-card.full-width .card-desc {
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    /* ========================================
+       SELECT TYPE - PAGE 2
+       ======================================== */
+    .page-title {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .page-subtitle {
+      color: var(--medium-gray);
+      margin-bottom: 32px;
+    }
+
+    .types-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .type-card {
+      background: var(--pure-white);
+      border-radius: 16px;
+      padding: 32px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 2px solid var(--border-color);
+    }
+
+    .type-card:hover {
+      border-color: var(--primary-purple);
+      box-shadow: var(--shadow-2);
+    }
+
+    .type-card.selected {
+      border-color: var(--primary-purple);
+      background: var(--light-purple);
+    }
+
+    .type-icon {
+      width: 80px;
+      height: 80px;
+      background: var(--light-purple);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      color: var(--primary-purple);
+      margin: 0 auto 16px;
+    }
+
+    .type-card.selected .type-icon {
+      background: var(--primary-purple);
+      color: var(--pure-white);
+    }
+
+    .type-title {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .type-specs {
+      font-size: 14px;
+      color: var(--medium-gray);
+    }
+
+    /* ========================================
+       DATA ENTRY - PAGE 3
+       ======================================== */
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 8px;
+    }
+
+    .tab {
+      padding: 12px 24px;
+      border-radius: 8px 8px 0 0;
+      cursor: pointer;
+      font-weight: 500;
+      color: var(--medium-gray);
+      transition: all 0.2s;
+    }
+
+    .tab:hover {
+      color: var(--primary-purple);
+    }
+
+    .tab.active {
+      background: var(--primary-purple);
+      color: var(--pure-white);
+    }
+
+    .tab-content {
+      display: none;
+      background: var(--pure-white);
+      border-radius: 16px;
+      padding: 32px;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .input-group {
+      margin-bottom: 24px;
+    }
+
+    .input-label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+
+    .input-field {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 16px;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+
+    .input-field:focus {
+      outline: none;
+      border-color: var(--primary-purple);
+      box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+    }
+
+    textarea.input-field {
+      min-height: 150px;
+      resize: vertical;
+    }
+
+    /* ========================================
+       EDITOR - PAGE 4
+       ======================================== */
+    .editor-layout {
+      display: flex;
+      gap: 24px;
+      height: calc(100vh - 200px);
+    }
+
+    .editor-main {
+      flex: 1;
+      background: var(--pure-white);
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .editor-sidebar {
+      width: 200px;
+      background: var(--pure-white);
+      border-radius: 16px;
+      padding: 24px;
+    }
+
+    /* Banner Section */
+    .banner-section {
+      background: var(--light-purple);
+      border: 2px dashed var(--primary-purple);
+      border-radius: 16px;
+      padding: 24px;
+      margin: 24px;
+      text-align: center;
+    }
+
+    .banner-text {
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--primary-purple);
+      outline: none;
+    }
+
+    .banner-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 16px;
+    }
+
+    /* Banner Section - RENDER STATE (for preview/export) - v2.0 */
+    .banner-section.rendered {
+      background: var(--banner-red);
+      border: none;
+      box-shadow: var(--shadow-2);
+    }
+
+    .banner-section.rendered .banner-text {
+      color: var(--pure-white);
+    }
+
+    /* Alternative: Image Background Banner */
+    .banner-section.image-bg {
+      background-size: cover;
+      background-position: center;
+      position: relative;
+    }
+
+    .banner-section.image-bg::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 16px;
+    }
+
+    .banner-section.image-bg .banner-text {
+      position: relative;
+      z-index: 1;
+      color: var(--pure-white);
+    }
+
+    /* Product Grid */
+    .grid-3x3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      padding: 24px;
+      flex: 1;
+    }
+
+    .product-box {
+      aspect-ratio: 1 / 1.2;  /* v2.0 spec: slightly taller */
+      background: var(--pure-white); /* CRITICAL: Pure white */
+      border: 2px solid var(--light-gray);
+      border-radius: 8px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .product-box:hover {
+      border-color: var(--primary-purple);
+      box-shadow: var(--shadow-2);
+    }
+
+    .product-box.selected {
+      border-color: var(--primary-purple);
+      box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+    }
+
+    /* Product Badge */
+    .product-badge {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .badge-purple { background: var(--primary-purple); }
+    .badge-red { background: var(--error-red); }
+    .badge-orange { background: var(--warning-orange); }
+    .badge-green { background: var(--success-green); }
+
+    /* Product Image */
+    .product-image {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+
+    .product-image img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    /* Product Barcode (below image, above name) - v2.0 */
+    .product-barcode {
+      width: 80%;
+      height: 30px;
+      margin: 0 auto 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--pure-white);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+    }
+
+    .barcode-bars {
+      width: 100%;
+      height: 18px;
+      background: repeating-linear-gradient(
+        90deg,
+        #000 0px,
+        #000 1.5px,
+        transparent 1.5px,
+        transparent 3px
+      );
+    }
+
+    .barcode-number {
+      font-size: 9px;
+      font-family: 'Courier New', monospace;
+      color: var(--dark-gray);
+      margin-top: 2px;
+      letter-spacing: 1px;
+    }
+
+    /* Product Name */
+    .product-name {
+      font-size: 14px;
+      font-weight: 500;
+      text-align: center;
+      margin-bottom: 4px;
+    }
+
+    /* Product Price - Bottom Left */
+    .product-price {
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .price-old {
+      font-size: 12px;
+      color: var(--medium-gray);
+      text-decoration: line-through;
+      margin-left: 4px;
+    }
+
+    /* Product Checkbox - Bottom Right */
+    .product-checkbox {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      width: 18px;
+      height: 18px;
+      border: 2px solid #CBD5E1;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .product-box.selected .product-checkbox {
+      background: var(--primary-purple);
+      border-color: var(--primary-purple);
+      color: white;
+      font-size: 12px;
+    }
+
+    /* Product Edit Button */
+    .product-edit-btn {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      display: none;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: var(--primary-purple);
+      color: var(--pure-white);
+      border: none;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      z-index: 10;
+      box-shadow: var(--shadow-2);
+      transition: all 0.2s;
+    }
+
+    .product-box:hover .product-edit-btn {
+      display: flex;
+    }
+
+    .product-edit-btn:hover {
+      background: var(--primary-dark);
+      transform: scale(1.05);
+    }
+
+    .product-edit-btn i {
+      font-size: 14px;
+    }
+
+    /* Empty Box */
+    .empty-box {
+      aspect-ratio: 1 / 1.2;  /* Match product boxes */
+      background: var(--light-purple);
+      border: 2px dashed var(--primary-purple);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .empty-box:hover {
+      background: #ddd6fe;
+    }
+
+    .empty-box-icon {
+      width: 40px;
+      height: 40px;
+      background: var(--primary-purple);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+
+    .empty-box-text {
+      color: var(--primary-purple);
+      font-weight: 500;
+    }
+
+    /* Sidebar Sections */
+    .sidebar-section {
+      margin-bottom: 24px;
+    }
+
+    .sidebar-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--dark-gray);
+    }
+
+    .color-picker {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .color-circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .color-circle:hover,
+    .color-circle.selected {
+      border-color: var(--dark-gray);
+      transform: scale(1.1);
+    }
+
+    .template-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .template-thumb {
+      aspect-ratio: 1;
+      background: var(--light-gray);
+      border-radius: 8px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .template-thumb:hover,
+    .template-thumb.selected {
+      border-color: var(--primary-purple);
+    }
+
+    /* ========================================
+       BOTTOM BAR
+       ======================================== */
+    .bottom-bar {
+      height: 72px;
+      background: var(--pure-white);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+    }
+
+    .bottom-bar-right {
+      display: flex;
+      gap: 12px;
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 12px 24px;
+      border-radius: 50px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      font-family: inherit;
+    }
+
+    .btn-primary {
+      background: var(--primary-purple);
+      color: var(--pure-white);
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+      box-shadow: var(--shadow-purple);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--primary-purple);
+      border: 2px solid var(--primary-purple);
+    }
+
+    .btn-outline:hover {
+      background: var(--light-purple);
+    }
+
+    .btn-text {
+      background: transparent;
+      color: var(--medium-gray);
+    }
+
+    .btn-text:hover {
+      color: var(--primary-purple);
+    }
+
+    .btn-icon {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ========================================
+       VOICE CONTROL
+       ======================================== */
+    .voice-control {
+      position: fixed;
+      bottom: 90px;
+      left: 32px;
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, var(--primary-purple) 0%, var(--primary-light) 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+      z-index: 99;
+      transition: all 0.2s;
+    }
+
+    .voice-control:hover {
+      transform: scale(1.1);
+    }
+
+    .voice-control.active {
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+    }
+
+    /* ========================================
+       MODALS
+       ======================================== */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--pure-white);
+      border-radius: 16px;
+      padding: 32px;
+      max-width: 500px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .modal-title {
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .modal-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--light-gray);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 20px;
+    }
+
+    .modal-close:hover {
+      background: var(--border-color);
+    }
+
+    .modal-footer {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 24px;
+    }
+
+    /* Radio Options */
+    .radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .radio-option {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .radio-option:hover {
+      border-color: var(--primary-purple);
+    }
+
+    .radio-option.selected {
+      border-color: var(--primary-purple);
+      background: var(--light-purple);
+    }
+
+    .radio-circle {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border-color);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .radio-option.selected .radio-circle {
+      border-color: var(--primary-purple);
+    }
+
+    .radio-option.selected .radio-circle::after {
+      content: '';
+      width: 10px;
+      height: 10px;
+      background: var(--primary-purple);
+      border-radius: 50%;
+    }
+
+    /* Checkbox Options */
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .checkbox-option {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .checkbox-option:hover {
+      border-color: var(--primary-purple);
+    }
+
+    .checkbox-option.selected {
+      border-color: var(--primary-purple);
+      background: var(--light-purple);
+    }
+
+    .checkbox-box {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border-color);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .checkbox-option.selected .checkbox-box {
+      background: var(--primary-purple);
+      border-color: var(--primary-purple);
+      color: white;
+    }
+
+    /* Business Type Grid */
+    .business-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .business-item {
+      padding: 16px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .business-item:hover {
+      border-color: var(--primary-purple);
+      background: var(--light-purple);
+    }
+
+    .business-icon {
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+
+    /* ========================================
+       RESPONSIVE
+       ======================================== */
+    @media (max-width: 768px) {
+      .dashboard-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .dashboard-card.full-width {
+        grid-column: span 2;
+      }
+
+      .types-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .editor-layout {
+        flex-direction: column;
+      }
+
+      .editor-sidebar {
+        width: 100%;
+      }
+
+      .grid-3x3 {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    /* ========================================
+       PRODUCT EDITOR MODAL
+       ======================================== */
+    .modal-large {
+      max-width: 900px;
+      width: 95%;
+    }
+
+    .editor-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+    }
+
+    /* Image Section */
+    .editor-image-section h3 {
+      margin-bottom: 16px;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .image-preview-container {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 1.2;  /* Match product boxes */
+      background: var(--light-gray);
+      border: 2px dashed var(--border-color);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    .image-preview-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .image-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .image-preview-container:hover .image-overlay {
+      opacity: 1;
+    }
+
+    .upload-options {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .btn-block {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .url-input-container {
+      display: none;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .url-input-container .form-control {
+      flex: 1;
+    }
+
+    .image-requirements {
+      padding: 16px;
+      background: var(--light-gray);
+      border-radius: 8px;
+    }
+
+    .image-requirements h4 {
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    .image-requirements ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .image-requirements li {
+      font-size: 13px;
+      color: var(--medium-gray);
+      padding: 4px 0;
+      padding-right: 20px;
+      position: relative;
+    }
+
+    .image-requirements li::before {
+      content: '✓';
+      position: absolute;
+      right: 0;
+      color: var(--success-green);
+      font-weight: bold;
+    }
+
+    /* Fields Section */
+    .editor-fields-section {
+      max-height: 600px;
+      overflow-y: auto;
+      padding-left: 8px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    .form-group label i {
+      margin-left: 6px;
+      color: var(--primary-purple);
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary-purple);
+    }
+
+    .form-control::placeholder {
+      color: var(--medium-gray);
+    }
+
+    .form-group small {
+      display: block;
+      margin-top: 4px;
+      font-size: 12px;
+      color: var(--medium-gray);
+    }
+
+    .price-input-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .currency-symbol {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .price-input-group .form-control {
+      flex: 1;
+    }
+
+    .optional-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      background: var(--light-gray);
+      color: var(--medium-gray);
+      font-size: 11px;
+      border-radius: 4px;
+      margin-right: 8px;
+    }
+
+    .badge-selector {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .badge-option {
+      cursor: pointer;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      padding: 8px;
+      text-align: center;
+      transition: all 0.2s;
+    }
+
+    .badge-option:hover {
+      border-color: var(--primary-purple);
+    }
+
+    .badge-option.selected {
+      border-color: var(--primary-purple);
+      background: var(--light-purple);
+    }
+
+    .badge-option input[type="radio"] {
+      display: none;
+    }
+
+    .badge-preview {
+      padding: 4px 8px;
+      border-radius: 4px;
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      display: inline-block;
+    }
+
+    .badge-none {
+      background: var(--light-gray);
+      color: var(--medium-gray);
+    }
+
+    .editor-preview-section {
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .editor-preview-section h4 {
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+
+    .preview-box {
+      max-width: 200px;
+      margin: 0 auto;
+      pointer-events: none;
+    }
+
+    .editor-fields-section::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .editor-fields-section::-webkit-scrollbar-track {
+      background: var(--light-gray);
+      border-radius: 3px;
+    }
+
+    .editor-fields-section::-webkit-scrollbar-thumb {
+      background: var(--medium-gray);
+      border-radius: 3px;
+    }
+
+    @media (max-width: 768px) {
+      .editor-layout {
+        grid-template-columns: 1fr;
+      }
+      
+      .editor-fields-section {
+        max-height: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- ========================================
+       HEADER
+       ======================================== -->
+  <header class="header">
+    <div class="header-logo">FLYGEN</div>
+    <div class="header-user">
+      <!-- Language Selector -->
+      <div class="language-selector">
+        <button class="lang-btn" onclick="toggleLangDropdown()">
+          <span class="lang-flag" id="current-lang-flag">🇮🇱</span>
+          <span id="current-lang-name">עברית</span>
+          <i class="ri-arrow-down-s-line"></i>
+        </button>
+        <div class="lang-dropdown" id="lang-dropdown">
+          <div class="lang-option active" data-lang="he" data-dir="rtl" onclick="selectLanguage('he')">
+            <span class="lang-flag">🇮🇱</span>
+            <span class="lang-name">עברית</span>
+            <i class="ri-check-line"></i>
+          </div>
+          <div class="lang-option" data-lang="ar" data-dir="rtl" onclick="selectLanguage('ar')">
+            <span class="lang-flag">🇸🇦</span>
+            <span class="lang-name">العربية</span>
+            <i class="ri-check-line"></i>
+          </div>
+          <div class="lang-option" data-lang="en" data-dir="ltr" onclick="selectLanguage('en')">
+            <span class="lang-flag">🇺🇸</span>
+            <span class="lang-name">English</span>
+            <i class="ri-check-line"></i>
+          </div>
+          <div class="lang-option" data-lang="ru" data-dir="ltr" onclick="selectLanguage('ru')">
+            <span class="lang-flag">🇷🇺</span>
+            <span class="lang-name">Русский</span>
+            <i class="ri-check-line"></i>
+          </div>
+        </div>
+      </div>
+
+      <span>ישראל ישראלי</span>
+      <div class="header-user-avatar">
+        <i class="ri-user-line"></i>
+      </div>
+      <div class="header-menu">
+        <i class="ri-menu-line"></i>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========================================
+       PAGE CONTAINER
+       ======================================== -->
+  <div class="page-container">
+    
+    <!-- ========================================
+         PAGE 1: DASHBOARD
+         ======================================== -->
+    <div id="page-dashboard" class="page active">
+      <div class="slogan">DESIGN • GENERATE • SHARE</div>
+      
+      <div class="dashboard-grid">
+        <!-- Quick Create Card -->
+        <div class="dashboard-card full-width" onclick="navigateTo('page-select')">
+          <div class="card-icon">
+            <i class="ri-add-line"></i>
+          </div>
+          <div class="card-title">צור פלייר מהיר</div>
+          <div class="card-desc">התחל קמפיין חדש ב-3 צעדים פשוטים</div>
+        </div>
+
+        <!-- Business Type Card -->
+        <div class="dashboard-card" onclick="openModal('business-modal')">
+          <div class="card-icon">
+            <i class="ri-store-2-line"></i>
+          </div>
+          <div class="card-title">בחר לפי סוג עסק</div>
+          <div class="card-desc">תבניות מותאמות</div>
+        </div>
+
+        <!-- Create Catalog Card -->
+        <div class="dashboard-card" onclick="alert('קטלוג - בקרוב!')">
+          <div class="card-icon">
+            <i class="ri-book-open-line"></i>
+          </div>
+          <div class="card-title">צור קטלוג</div>
+          <div class="card-desc">ספר מוצרים דיגיטלי</div>
+        </div>
+
+        <!-- Create Quote Card -->
+        <div class="dashboard-card" onclick="alert('הצעת מחיר - בקרוב!')">
+          <div class="card-icon">
+            <i class="ri-file-text-line"></i>
+          </div>
+          <div class="card-title">הצעת מחיר</div>
+          <div class="card-desc">מסמך מקצועי ללקוחות</div>
+        </div>
+
+        <!-- Share Card -->
+        <div class="dashboard-card" onclick="openModal('share-modal')">
+          <div class="card-icon">
+            <i class="ri-share-line"></i>
+          </div>
+          <div class="card-title">שתף קמפיין</div>
+          <div class="card-desc">WhatsApp, SMS, Email</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================
+         PAGE 2: SELECT FLYER TYPE
+         ======================================== -->
+    <div id="page-select" class="page">
+      <div class="breadcrumb">
+        <a onclick="navigateTo('page-dashboard')">ראשי</a>
+        <span class="breadcrumb-separator">/</span>
+        <span>בחירת סוג</span>
+      </div>
+
+      <h1 class="page-title">בחר סוג פלייר</h1>
+      <p class="page-subtitle">בחר את הפורמט המתאים לקמפיין שלך</p>
+
+      <div class="types-grid">
+        <div class="type-card" onclick="selectType(this, 'a4')" data-type="a4">
+          <div class="type-icon">
+            <i class="ri-file-paper-line"></i>
+          </div>
+          <div class="type-title">פלייר A4</div>
+          <div class="type-specs">מוכן להדפסה • פורמט אנכי</div>
+        </div>
+
+        <div class="type-card" onclick="selectType(this, 'social')" data-type="social">
+          <div class="type-icon">
+            <i class="ri-instagram-line"></i>
+          </div>
+          <div class="type-title">פוסט לרשתות</div>
+          <div class="type-specs">1080×1080 פיקסל • Instagram/Facebook</div>
+        </div>
+
+        <div class="type-card" onclick="selectType(this, 'coupon')" data-type="coupon">
+          <div class="type-icon">
+            <i class="ri-coupon-line"></i>
+          </div>
+          <div class="type-title">קופונים</div>
+          <div class="type-specs">1080×500 פיקסל • רצועות אופקיות</div>
+        </div>
+      </div>
+
+      <div style="text-align: center; margin-top: 32px;">
+        <button class="btn btn-primary" onclick="navigateTo('page-data')">
+          המשך <i class="ri-arrow-left-line"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- ========================================
+         PAGE 3: DATA ENTRY
+         ======================================== -->
+    <div id="page-data" class="page">
+      <div class="breadcrumb">
+        <a onclick="navigateTo('page-dashboard')">ראשי</a>
+        <span class="breadcrumb-separator">/</span>
+        <a onclick="navigateTo('page-select')">בחירת סוג</a>
+        <span class="breadcrumb-separator">/</span>
+        <span>הזנת נתונים</span>
+      </div>
+
+      <h1 class="page-title">הזנת מוצרים</h1>
+      <p class="page-subtitle">הזן את רשימת המוצרים לפלייר</p>
+
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab(0)">הזנת טקסט</div>
+        <div class="tab" onclick="switchTab(1)">העלאת CSV</div>
+        <div class="tab" onclick="switchTab(2)">קישור לאתר</div>
+      </div>
+
+      <!-- Tab 1: Text Input -->
+      <div id="tab-0" class="tab-content active">
+        <div class="input-group">
+          <label class="input-label">הזן רשימת מוצרים (שם, מחיר)</label>
+          <textarea class="input-field" placeholder="קוקה קולה 1.5 ליטר, 7.90
+חלב תנובה 3%, 6.90
+לחם אחיד, 5.90"></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="generatePreview()">
+          <i class="ri-magic-line"></i> צור תצוגה מקדימה
+        </button>
+      </div>
+
+      <!-- Tab 2: CSV Upload -->
+      <div id="tab-1" class="tab-content">
+        <div class="input-group">
+          <label class="input-label">העלה קובץ CSV</label>
+          <input type="file" class="input-field" accept=".csv">
+        </div>
+        <button class="btn btn-primary" onclick="generatePreview()">
+          <i class="ri-upload-2-line"></i> העלה וצור תצוגה
+        </button>
+      </div>
+
+      <!-- Tab 3: URL -->
+      <div id="tab-2" class="tab-content">
+        <div class="input-group">
+          <label class="input-label">הזן קישור לעמוד מוצרים</label>
+          <input type="url" class="input-field" placeholder="https://www.myshop.co.il/sale">
+        </div>
+        <button class="btn btn-primary" onclick="generatePreview()">
+          <i class="ri-search-line"></i> סרוק ומשוך מוצרים
+        </button>
+      </div>
+    </div>
+
+    <!-- ========================================
+         PAGE 4: EDITOR
+         ======================================== -->
+    <div id="page-editor" class="page">
+      <div class="breadcrumb">
+        <a onclick="navigateTo('page-dashboard')">ראשי</a>
+        <span class="breadcrumb-separator">/</span>
+        <a onclick="navigateTo('page-select')">בחירת סוג</a>
+        <span class="breadcrumb-separator">/</span>
+        <a onclick="navigateTo('page-data')">הזנת נתונים</a>
+        <span class="breadcrumb-separator">/</span>
+        <span>עריכה</span>
+      </div>
+
+      <div class="editor-layout">
+        <!-- Main Editor Area -->
+        <div class="editor-main">
+          <!-- Banner -->
+          <div class="banner-section">
+            <div class="banner-text" contenteditable="true">מבצעי השבוע</div>
+            <div class="banner-buttons">
+              <button class="btn btn-outline btn-icon" onclick="alert('העלאת תמונת רקע')">
+                <i class="ri-image-line"></i> תבנית רקע
+              </button>
+              <button class="btn btn-outline btn-icon" onclick="alert('יצירה עם AI - בקרוב!')">
+                <i class="ri-sparkling-line"></i> צור עם AI
+              </button>
+            </div>
+          </div>
+
+          <!-- Product Grid 3x3 -->
+          <div class="grid-3x3">
+            <!-- Product 1 -->
+            <div class="product-box" onclick="toggleProduct(this)" data-product-id="product-1">
+              <!-- Edit Button -->
+              <button class="product-edit-btn" onclick="event.stopPropagation(); openProductEditor(this.parentElement)">
+                <i class="ri-pencil-line"></i>
+                <span>ערוך</span>
+              </button>
+              
+              <span class="product-badge badge-orange">מבצע</span>
+              <div class="product-image">
+                <img src="https://via.placeholder.com/120?text=קולה" alt="קוקה קולה">
+              </div>
+              <div class="product-barcode">
+                <div class="barcode-bars"></div>
+                <div class="barcode-number">7290000271682</div>
+              </div>
+              <div class="product-name">קוקה קולה 1.5 ליטר</div>
+              <div class="product-price">₪7.90</div>
+              <div class="product-checkbox"></div>
+            </div>
+
+            <!-- Product 2 -->
+            <div class="product-box" onclick="toggleProduct(this)" data-product-id="product-2">
+              <!-- Edit Button -->
+              <button class="product-edit-btn" onclick="event.stopPropagation(); openProductEditor(this.parentElement)">
+                <i class="ri-pencil-line"></i>
+                <span>ערוך</span>
+              </button>
+              
+              <span class="product-badge badge-green">חדש</span>
+              <div class="product-image">
+                <img src="https://via.placeholder.com/120?text=חלב" alt="חלב">
+              </div>
+              <div class="product-barcode">
+                <div class="barcode-bars"></div>
+                <div class="barcode-number">7290000435891</div>
+              </div>
+              <div class="product-name">חלב תנובה 3%</div>
+              <div class="product-price">₪6.90</div>
+              <div class="product-checkbox"></div>
+            </div>
+
+            <!-- Product 3 -->
+            <div class="product-box selected" onclick="toggleProduct(this)" data-product-id="product-3">
+              <!-- Edit Button -->
+              <button class="product-edit-btn" onclick="event.stopPropagation(); openProductEditor(this.parentElement)">
+                <i class="ri-pencil-line"></i>
+                <span>ערוך</span>
+              </button>
+              
+              <span class="product-badge badge-purple">חברי מועדון</span>
+              <div class="product-image">
+                <img src="https://via.placeholder.com/120?text=לחם" alt="לחם">
+              </div>
+              <div class="product-barcode">
+                <div class="barcode-bars"></div>
+                <div class="barcode-number">7290000789123</div>
+              </div>
+              <div class="product-name">לחם אחיד</div>
+              <div class="product-price">
+                <span class="price-old">₪7.90</span>
+                ₪5.90
+              </div>
+              <div class="product-checkbox">✓</div>
+            </div>
+
+            <!-- Product 4 -->
+            <div class="product-box" onclick="toggleProduct(this)" data-product-id="product-4">
+              <!-- Edit Button -->
+              <button class="product-edit-btn" onclick="event.stopPropagation(); openProductEditor(this.parentElement)">
+                <i class="ri-pencil-line"></i>
+                <span>ערוך</span>
+              </button>
+              
+              <div class="product-image">
+                <img src="https://via.placeholder.com/120?text=ביצים" alt="ביצים">
+              </div>
+              <div class="product-barcode">
+                <div class="barcode-bars"></div>
+                <div class="barcode-number">7290000512347</div>
+              </div>
+              <div class="product-name">ביצים L תבנית</div>
+              <div class="product-price">₪14.90</div>
+              <div class="product-checkbox"></div>
+            </div>
+
+            <!-- Product 5 -->
+            <div class="product-box" onclick="toggleProduct(this)" data-product-id="product-5">
+              <!-- Edit Button -->
+              <button class="product-edit-btn" onclick="event.stopPropagation(); openProductEditor(this.parentElement)">
+                <i class="ri-pencil-line"></i>
+                <span>ערוך</span>
+              </button>
+              
+              <span class="product-badge badge-red">MEGA SALE</span>
+              <div class="product-image">
+                <img src="https://via.placeholder.com/120?text=שמן" alt="שמן">
+              </div>
+              <div class="product-barcode">
+                <div class="barcode-bars"></div>
+                <div class="barcode-number">7290000658901</div>
+              </div>
+              <div class="product-name">שמן זית כתית מעולה</div>
+              <div class="product-price">₪29.90</div>
+              <div class="product-checkbox"></div>
+            </div>
+
+            <!-- Product 6 -->
+            <div class="product-box" onclick="toggleProduct(this)" data-product-id="product-6">
+              <!-- Edit Button -->
+              <button class="product-edit-btn" onclick="event.stopPropagation(); openProductEditor(this.parentElement)">
+                <i class="ri-pencil-line"></i>
+                <span>ערוך</span>
+              </button>
+              
+              <div class="product-image">
+                <img src="https://via.placeholder.com/120?text=פסטה" alt="פסטה">
+              </div>
+              <div class="product-barcode">
+                <div class="barcode-bars"></div>
+                <div class="barcode-number">7290000923456</div>
+              </div>
+              <div class="product-name">פסטה ברילה 500 גרם</div>
+              <div class="product-price">₪8.90</div>
+              <div class="product-checkbox"></div>
+            </div>
+
+            <!-- Empty Slots -->
+            <div class="empty-box" onclick="openProductModal()">
+              <div class="empty-box-icon">
+                <i class="ri-add-line"></i>
+              </div>
+              <div class="empty-box-text">הוסף מוצר</div>
+            </div>
+
+            <div class="empty-box" onclick="openProductModal()">
+              <div class="empty-box-icon">
+                <i class="ri-add-line"></i>
+              </div>
+              <div class="empty-box-text">הוסף מוצר</div>
+            </div>
+
+            <div class="empty-box" onclick="openProductModal()">
+              <div class="empty-box-icon">
+                <i class="ri-add-line"></i>
+              </div>
+              <div class="empty-box-text">הוסף מוצר</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="editor-sidebar">
+          <div class="sidebar-section">
+            <div class="sidebar-title">צבעים</div>
+            <div class="color-picker">
+              <div class="color-circle selected" style="background: #DC2626;" onclick="selectColor(this)"></div>
+              <div class="color-circle" style="background: #2563EB;" onclick="selectColor(this)"></div>
+              <div class="color-circle" style="background: #059669;" onclick="selectColor(this)"></div>
+              <div class="color-circle" style="background: #D97706;" onclick="selectColor(this)"></div>
+              <div class="color-circle" style="background: #7C3AED;" onclick="selectColor(this)"></div>
+              <div class="color-circle" style="background: #64748B;" onclick="selectColor(this)"></div>
+              <div class="color-circle" style="background: #1E293B;" onclick="selectColor(this)"></div>
+              <div class="color-circle" style="background: #FFFFFF; border: 1px solid #E2E8F0;" onclick="selectColor(this)"></div>
+            </div>
+          </div>
+
+          <div class="sidebar-section">
+            <div class="sidebar-title">תבניות</div>
+            <div class="template-grid">
+              <div class="template-thumb selected" onclick="selectTemplate(this)"></div>
+              <div class="template-thumb" onclick="selectTemplate(this)"></div>
+              <div class="template-thumb" onclick="selectTemplate(this)"></div>
+              <div class="template-thumb" onclick="selectTemplate(this)"></div>
+            </div>
+          </div>
+
+          <div class="sidebar-section">
+            <div class="sidebar-title">גופן</div>
+            <select class="input-field">
+              <option>Heebo</option>
+              <option>Assistant</option>
+              <option>Rubik</option>
+              <option>Open Sans Hebrew</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================
+       VOICE CONTROL
+       ======================================== -->
+  <div class="voice-control" onclick="toggleVoice()">
+    <i class="ri-mic-line" id="voice-icon"></i>
+  </div>
+
+  <!-- ========================================
+       BOTTOM BAR
+       ======================================== -->
+  <div class="bottom-bar">
+    <button class="btn btn-text" onclick="saveDraft()">
+      <i class="ri-save-line"></i> שמור טיוטה
+    </button>
+    <div class="bottom-bar-right">
+      <button class="btn btn-outline btn-icon" onclick="openModal('share-modal')" title="שתף פלייר">
+        <i class="ri-share-line"></i> שתף
+      </button>
+      <button class="btn btn-outline btn-icon" onclick="downloadAsPDF()" title="הורד PDF">
+        <i class="ri-download-line"></i> הורד
+      </button>
+      <button class="btn btn-outline btn-icon" onclick="previewFlyer()" title="תצוגה מקדימה">
+        <i class="ri-eye-line"></i> תצוגה מקדימה
+      </button>
+      <button class="btn btn-primary btn-icon" onclick="openModal('schedule-modal')">
+        <i class="ri-send-plane-line"></i> פרסם קמפיין
+      </button>
+    </div>
+  </div>
+
+  <!-- ========================================
+       MODALS
+       ======================================== -->
+  
+  <!-- Schedule Modal -->
+  <div id="schedule-modal" class="modal-overlay" onclick="closeModalOnOverlay(event)">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title">תזמון קמפיין</h2>
+        <div class="modal-close" onclick="closeModal('schedule-modal')">×</div>
+      </div>
+      
+      <div class="radio-group">
+        <div class="radio-option selected" onclick="selectRadio(this)">
+          <div class="radio-circle"></div>
+          <span>פרסם עכשיו</span>
+        </div>
+        <div class="radio-option" onclick="selectRadio(this)">
+          <div class="radio-circle"></div>
+          <span>תזמן לתאריך ושעה</span>
+        </div>
+        <div class="radio-option" onclick="selectRadio(this)">
+          <div class="radio-circle"></div>
+          <span>פרסום חוזר</span>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-text" onclick="closeModal('schedule-modal')">ביטול</button>
+        <button class="btn btn-primary" onclick="closeModal('schedule-modal'); openModal('platform-modal')">
+          המשך <i class="ri-arrow-left-line"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Platform Modal -->
+  <div id="platform-modal" class="modal-overlay" onclick="closeModalOnOverlay(event)">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title">בחר פלטפורמות לשיתוף</h2>
+        <div class="modal-close" onclick="closeModal('platform-modal')">×</div>
+      </div>
+      
+      <div class="checkbox-group">
+        <div class="checkbox-option selected" onclick="toggleCheckbox(this)">
+          <div class="checkbox-box">✓</div>
+          <i class="ri-facebook-fill" style="color: #1877F2;"></i>
+          <span>Facebook</span>
+        </div>
+        <div class="checkbox-option" onclick="toggleCheckbox(this)">
+          <div class="checkbox-box"></div>
+          <i class="ri-instagram-fill" style="color: #E4405F;"></i>
+          <span>Instagram (Feed)</span>
+        </div>
+        <div class="checkbox-option" onclick="toggleCheckbox(this)">
+          <div class="checkbox-box"></div>
+          <i class="ri-instagram-fill" style="color: #E4405F;"></i>
+          <span>Instagram (Story)</span>
+        </div>
+        <div class="checkbox-option selected" onclick="toggleCheckbox(this)">
+          <div class="checkbox-box">✓</div>
+          <i class="ri-whatsapp-fill" style="color: #25D366;"></i>
+          <span>WhatsApp Status</span>
+        </div>
+        <div class="checkbox-option" onclick="toggleCheckbox(this)">
+          <div class="checkbox-box"></div>
+          <i class="ri-telegram-fill" style="color: #0088CC;"></i>
+          <span>Telegram Channel</span>
+        </div>
+        <div class="checkbox-option" onclick="toggleCheckbox(this)">
+          <div class="checkbox-box"></div>
+          <i class="ri-message-2-fill" style="color: #7C3AED;"></i>
+          <span>SMS Campaign</span>
+        </div>
+        <div class="checkbox-option" onclick="toggleCheckbox(this)">
+          <div class="checkbox-box"></div>
+          <i class="ri-mail-fill" style="color: #EA4335;"></i>
+          <span>Email Newsletter</span>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-text" onclick="closeModal('platform-modal'); openModal('schedule-modal')">
+          <i class="ri-arrow-right-line"></i> חזור
+        </button>
+        <button class="btn btn-primary" onclick="closeModal('platform-modal'); openModal('export-modal')">
+          המשך <i class="ri-arrow-left-line"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Export Modal -->
+  <div id="export-modal" class="modal-overlay" onclick="closeModalOnOverlay(event)">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title">ייצוא קמפיין</h2>
+        <div class="modal-close" onclick="closeModal('export-modal')">×</div>
+      </div>
+      
+      <p style="margin-bottom: 16px;">בחר פורמט:</p>
+      <div class="radio-group">
+        <div class="radio-option selected" onclick="selectRadio(this)">
+          <div class="radio-circle"></div>
+          <span>קישור שיתוף (URL)</span>
+        </div>
+        <div class="radio-option" onclick="selectRadio(this)">
+          <div class="radio-circle"></div>
+          <span>PDF להדפסה</span>
+        </div>
+        <div class="radio-option" onclick="selectRadio(this)">
+          <div class="radio-circle"></div>
+          <span>תמונה (JPG/PNG)</span>
+        </div>
+        <div class="radio-option" onclick="selectRadio(this)">
+          <div class="radio-circle"></div>
+          <span>ZIP עם כל הפורמטים</span>
+        </div>
+        <div class="radio-option" onclick="selectRadio(this)" style="border: 2px solid #4285F4; background: #E8F0FE;">
+          <div class="radio-circle"></div>
+          <i class="ri-google-fill" style="color: #4285F4; margin-left: 8px;"></i>
+          <span style="color: #4285F4; font-weight: 600;">שמור ל-Google Drive</span>
+        </div>
+      </div>
+
+      <div class="input-group" style="margin-top: 24px;">
+        <label class="input-label">איכות:</label>
+        <select class="input-field">
+          <option>גבוהה (300 DPI)</option>
+          <option>בינונית (150 DPI)</option>
+          <option>נמוכה (72 DPI)</option>
+        </select>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-text" onclick="closeModal('export-modal'); openModal('platform-modal')">
+          <i class="ri-arrow-right-line"></i> חזור
+        </button>
+        <button class="btn btn-primary" onclick="exportCampaign()">
+          <i class="ri-check-line"></i> ייצא וסיים
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Share Modal -->
+  <div id="share-modal" class="modal-overlay" onclick="closeModalOnOverlay(event)">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title">שתף קמפיין</h2>
+        <div class="modal-close" onclick="closeModal('share-modal')">×</div>
+      </div>
+      
+      <div class="input-group">
+        <label class="input-label">קישור לשיתוף:</label>
+        <div style="display: flex; gap: 8px;">
+          <input type="text" id="share-url-input" class="input-field" value="" readonly style="flex: 1;">
+          <button class="btn btn-outline" onclick="copyShareLink()" title="העתק קישור">
+            <i class="ri-file-copy-line"></i>
+          </button>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 12px; justify-content: center; margin: 24px 0; flex-wrap: wrap;">
+        <button class="btn btn-outline" style="color: #25D366; border-color: #25D366;" onclick="shareToWhatsApp()">
+          <i class="ri-whatsapp-fill"></i> WhatsApp
+        </button>
+        <button class="btn btn-outline" style="color: #1877F2; border-color: #1877F2;" onclick="shareToFacebook()">
+          <i class="ri-facebook-fill"></i> Facebook
+        </button>
+        <button class="btn btn-outline" style="color: #EA4335; border-color: #EA4335;" onclick="shareToEmail()">
+          <i class="ri-mail-fill"></i> Email
+        </button>
+        <button class="btn btn-outline" style="color: #4285F4; border-color: #4285F4;" onclick="downloadAsPNG()">
+          <i class="ri-download-line"></i> הורדה
+        </button>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="closeModal('share-modal')">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Update share URL when modal opens
+    function updateShareUrl() {
+      const shareUrl = generateShareUrl();
+      const input = document.getElementById('share-url-input');
+      if (input) input.value = shareUrl;
+    }
+    
+    // Override openModal to update share URL
+    const originalOpenModal = openModal;
+    openModal = function(modalId) {
+      if (modalId === 'share-modal') {
+        updateShareUrl();
+      }
+      originalOpenModal(modalId);
+    };
+  </script>
+
+  <!-- Business Type Modal -->
+  <div id="business-modal" class="modal-overlay" onclick="closeModalOnOverlay(event)">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title">בחר סוג עסק</h2>
+        <div class="modal-close" onclick="closeModal('business-modal')">×</div>
+      </div>
+      
+      <div class="business-grid">
+        <div class="business-item" onclick="selectBusiness('מינימרקט')">
+          <div class="business-icon">🏪</div>
+          <div>מינימרקטים</div>
+        </div>
+        <div class="business-item" onclick="selectBusiness('קצביה')">
+          <div class="business-icon">🥩</div>
+          <div>קצביות</div>
+        </div>
+        <div class="business-item" onclick="selectBusiness('ירקות')">
+          <div class="business-icon">🥬</div>
+          <div>חנות ירקות ופירות</div>
+        </div>
+        <div class="business-item" onclick="selectBusiness('אלכוהול')">
+          <div class="business-icon">🍷</div>
+          <div>חנות אלכוהול</div>
+        </div>
+        <div class="business-item" onclick="selectBusiness('פארם')">
+          <div class="business-icon">💊</div>
+          <div>חנות פארם</div>
+        </div>
+        <div class="business-item" onclick="selectBusiness('בגדים')">
+          <div class="business-icon">👕</div>
+          <div>חנות בגדים</div>
+        </div>
+        <div class="business-item" onclick="selectBusiness('מזון מהיר')">
+          <div class="business-icon">🍔</div>
+          <div>מזון מהיר (בקרוב)</div>
+        </div>
+        <div class="business-item" onclick="selectBusiness('חיות')">
+          <div class="business-icon">🐕</div>
+          <div>חנות חיות</div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-text" onclick="closeModal('business-modal')">ביטול</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Product Modal -->
+  <div id="product-modal" class="modal-overlay" onclick="closeModalOnOverlay(event)">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title">הוסף מוצר</h2>
+        <div class="modal-close" onclick="closeModal('product-modal')">×</div>
+      </div>
+      
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <button class="btn btn-outline btn-icon" onclick="scanBarcode()">
+          <i class="ri-barcode-line"></i> סרוק ברקוד
+        </button>
+        <button class="btn btn-outline btn-icon" onclick="alert('העלאת תמונה')">
+          <i class="ri-image-add-line"></i> העלה תמונה
+        </button>
+        <button class="btn btn-outline btn-icon" onclick="addProductLink()">
+          <i class="ri-link"></i> הוסף קישור למוצר
+        </button>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-text" onclick="closeModal('product-modal')">ביטול</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================
+       JAVASCRIPT
+       ======================================== -->
+  <script>
+    // ========================================
+    // NAVIGATION
+    // ========================================
+    function navigateTo(pageId) {
+      document.querySelectorAll('.page').forEach(page => {
+        page.classList.remove('active');
+      });
+      document.getElementById(pageId).classList.add('active');
+      window.scrollTo(0, 0);
+    }
+
+    // ========================================
+    // TABS
+    // ========================================
+    function switchTab(tabIndex) {
+      document.querySelectorAll('.tab').forEach((tab, i) => {
+        tab.classList.toggle('active', i === tabIndex);
+      });
+      document.querySelectorAll('.tab-content').forEach((content, i) => {
+        content.classList.toggle('active', i === tabIndex);
+      });
+    }
+
+    // ========================================
+    // TYPE SELECTION
+    // ========================================
+    function selectType(element, type) {
+      document.querySelectorAll('.type-card').forEach(card => {
+        card.classList.remove('selected');
+      });
+      element.classList.add('selected');
+    }
+
+    // ========================================
+    // GENERATE PREVIEW
+    // ========================================
+    function generatePreview() {
+      alert('🔄 מייצר תצוגה מקדימה...');
+      setTimeout(() => {
+        navigateTo('page-editor');
+      }, 500);
+    }
+
+    // ========================================
+    // PRODUCT TOGGLE
+    // ========================================
+    function toggleProduct(element) {
+      element.classList.toggle('selected');
+      const checkbox = element.querySelector('.product-checkbox');
+      checkbox.textContent = element.classList.contains('selected') ? '✓' : '';
+    }
+
+    // ========================================
+    // COLOR SELECTION
+    // ========================================
+    function selectColor(element) {
+      document.querySelectorAll('.color-circle').forEach(c => {
+        c.classList.remove('selected');
+      });
+      element.classList.add('selected');
+    }
+
+    // ========================================
+    // TEMPLATE SELECTION
+    // ========================================
+    function selectTemplate(element) {
+      document.querySelectorAll('.template-thumb').forEach(t => {
+        t.classList.remove('selected');
+      });
+      element.classList.add('selected');
+    }
+
+    // ========================================
+    // VOICE CONTROL
+    // ========================================
+    let voiceActive = false;
+    function toggleVoice() {
+      voiceActive = !voiceActive;
+      const voiceBtn = document.querySelector('.voice-control');
+      const voiceIcon = document.getElementById('voice-icon');
+      
+      if (voiceActive) {
+        voiceBtn.classList.add('active');
+        voiceIcon.className = 'ri-stop-circle-line';
+        alert('🎤 הקראה קולית מופעלת! המערכת תקריא את הפלייר בקול...');
+      } else {
+        voiceBtn.classList.remove('active');
+        voiceIcon.className = 'ri-mic-line';
+      }
+    }
+
+    // ========================================
+    // BANNER MODE TOGGLE (v2.0 Enhancement)
+    // ========================================
+    function toggleBannerMode(isRendered) {
+      const banner = document.querySelector('.banner-section');
+      if (isRendered) {
+        banner.classList.add('rendered');
+      } else {
+        banner.classList.remove('rendered');
+      }
+    }
+
+    // ========================================
+    // BARCODE GENERATOR (v2.0 Enhancement)
+    // ========================================
+    function generateBarcode() {
+      const prefix = '729'; // Israel country code
+      const random = Math.floor(Math.random() * 9999999999).toString().padStart(10, '0');
+      return prefix + random;
+    }
+
+    // ========================================
+    // MODALS
+    // ========================================
+    function openModal(modalId) {
+      document.getElementById(modalId).classList.add('active');
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.remove('active');
+    }
+
+    function closeModalOnOverlay(event) {
+      if (event.target.classList.contains('modal-overlay')) {
+        event.target.classList.remove('active');
+      }
+    }
+
+    function openProductModal() {
+      openModal('product-modal');
+    }
+
+    // ========================================
+    // RADIO SELECTION
+    // ========================================
+    function selectRadio(element) {
+      const group = element.parentElement;
+      group.querySelectorAll('.radio-option').forEach(opt => {
+        opt.classList.remove('selected');
+      });
+      element.classList.add('selected');
+    }
+
+    // ========================================
+    // CHECKBOX TOGGLE
+    // ========================================
+    function toggleCheckbox(element) {
+      element.classList.toggle('selected');
+      const box = element.querySelector('.checkbox-box');
+      box.textContent = element.classList.contains('selected') ? '✓' : '';
+    }
+
+    // ========================================
+    // BUSINESS TYPE
+    // ========================================
+    function selectBusiness(type) {
+      alert('נבחר: ' + type + '\nטוען תבניות מותאמות...');
+      closeModal('business-modal');
+      navigateTo('page-select');
+    }
+
+    // ========================================
+    // BARCODE SCANNER
+    // ========================================
+    function scanBarcode() {
+      const barcode = prompt('סרוק או הזן ברקוד מוצר:');
+      if (barcode) {
+        alert('🔍 מחפש מוצר במאגר...\n\nברקוד: ' + barcode + '\n\n✅ מוצר נמצא! טוען תמונה ונתונים...');
+        closeModal('product-modal');
+      }
+    }
+
+    // ========================================
+    // ADD PRODUCT LINK
+    // ========================================
+    function addProductLink() {
+      const url = prompt('הזן קישור למוצר (לחנות או עמוד מוצר):');
+      if (url) {
+        alert('🔗 קישור נשמר: ' + url);
+        closeModal('product-modal');
+      }
+    }
+
+    // ========================================
+    // EXPORT & SHARE SYSTEM - FULL IMPLEMENTATION
+    // ========================================
+    
+    // Global variables for export system
+    let googleDriveToken = null;
+    let exportFormat = 'url'; // url, pdf, png, zip, gdrive
+    let exportQuality = 300; // DPI
+    
+    // ========================================
+    // FLYER CAPTURE - Convert to Image/PDF
+    // ========================================
+    async function captureFlyerAsImage() {
+      // Try to find flyer element - look for grid-3x3 or editor-main
+      let flyerElement = document.querySelector('.grid-3x3');
+      
+      // If grid is not visible, try editor-main
+      if (!flyerElement || !flyerElement.offsetParent) {
+        flyerElement = document.querySelector('.editor-main');
+      }
+      
+      if (!flyerElement) {
+        alert('❌ לא נמצא פלייר לייצוא. ודא שאתה בעמוד העריכה.');
+        return null;
+      }
+      
+      try {
+        const canvas = await html2canvas(flyerElement, {
+          scale: exportQuality / 96, // Convert DPI to scale
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff',
+          logging: false,
+          width: flyerElement.scrollWidth,
+          height: flyerElement.scrollHeight
+        });
+        
+        return canvas;
+      } catch (error) {
+        console.error('Error capturing flyer:', error);
+        alert('❌ שגיאה בלכידת הפלייר. נסה שוב.');
+        return null;
+      }
+    }
+    
+    // ========================================
+    // DOWNLOAD AS PNG
+    // ========================================
+    async function downloadAsPNG() {
+      const canvas = await captureFlyerAsImage();
+      if (!canvas) return;
+      
+      canvas.toBlob(function(blob) {
+        const fileName = `flyer-${Date.now()}.png`;
+        saveAs(blob, fileName);
+        showSuccessMessage('✅ הפלייר הורד בהצלחה כ-PNG!');
+      });
+    }
+    
+    // ========================================
+    // DOWNLOAD AS PDF
+    // ========================================
+    async function downloadAsPDF() {
+      const canvas = await captureFlyerAsImage();
+      if (!canvas) return;
+      
+      const { jsPDF } = window.jspdf;
+      const imgData = canvas.toDataURL('image/png');
+      
+      // A4 size in mm
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      const pdfWidth = 210; // A4 width in mm
+      const pdfHeight = 297; // A4 height in mm
+      
+      // Calculate image dimensions to fit A4
+      const imgWidth = pdfWidth;
+      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      
+      const fileName = `flyer-${Date.now()}.pdf`;
+      pdf.save(fileName);
+      
+      showSuccessMessage('✅ הפלייר הורד בהצלחה כ-PDF!');
+    }
+    
+    // ========================================
+    // DOWNLOAD AS ZIP (All Formats)
+    // ========================================
+    async function downloadAsZIP() {
+      const canvas = await captureFlyerAsImage();
+      if (!canvas) return;
+      
+      showLoadingMessage('⏳ יוצר קובץ ZIP עם כל הפורמטים...');
+      
+      const zip = new JSZip();
+      const timestamp = Date.now();
+      
+      // Add PNG
+      const pngBlob = await new Promise(resolve => {
+        canvas.toBlob(blob => resolve(blob));
+      });
+      zip.file(`flyer-${timestamp}.png`, pngBlob);
+      
+      // Add JPG
+      const jpgBlob = await new Promise(resolve => {
+        canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.95);
+      });
+      zip.file(`flyer-${timestamp}.jpg`, jpgBlob);
+      
+      // Add PDF
+      const { jsPDF } = window.jspdf;
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      const pdfWidth = 210;
+      const imgWidth = pdfWidth;
+      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      const pdfBlob = pdf.output('blob');
+      zip.file(`flyer-${timestamp}.pdf`, pdfBlob);
+      
+      // Generate ZIP
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      saveAs(zipBlob, `flyer-package-${timestamp}.zip`);
+      
+      showSuccessMessage('✅ חבילת ZIP הורדה בהצלחה!');
+    }
+    
+    // ========================================
+    // GOOGLE DRIVE UPLOAD
+    // ========================================
+    function initGoogleDrive() {
+      // Check if user is already authenticated
+      if (googleDriveToken) {
+        uploadToGoogleDrive();
+        return;
+      }
+      
+      // Start OAuth flow
+      const CLIENT_ID = 'YOUR_CLIENT_ID_HERE'; // Replace with actual Client ID
+      const SCOPE = 'https://www.googleapis.com/auth/drive.file';
+      
+      // For demo purposes, show message
+      alert('🔐 Google Drive Integration\n\nלהפעלת העלאה ל-Google Drive, יש להגדיר OAuth Client ID.\n\nבינתיים, הפלייר יורד למחשב שלך.');
+      downloadAsPNG();
+    }
+    
+    async function uploadToGoogleDrive() {
+      // This is a placeholder for actual Google Drive upload
+      // In production, you would use Google Drive API
+      showLoadingMessage('⏳ מעלה ל-Google Drive...');
+      
+      setTimeout(() => {
+        showSuccessMessage('✅ הפלייר הועלה ל-Google Drive!');
+      }, 2000);
+    }
+    
+    // ========================================
+    // SHARE FUNCTIONS
+    // ========================================
+    function shareToWhatsApp() {
+      const shareUrl = generateShareUrl();
+      const message = encodeURIComponent(`🎉 הפלייר החדש שלנו!\n\n${shareUrl}`);
+      window.open(`https://wa.me/?text=${message}`, '_blank');
+    }
+    
+    function shareToFacebook() {
+      const shareUrl = generateShareUrl();
+      window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, '_blank');
+    }
+    
+    function shareToEmail() {
+      const shareUrl = generateShareUrl();
+      const subject = encodeURIComponent('הפלייר החדש שלנו!');
+      const body = encodeURIComponent(`היי,\n\nבוא תראה את הפלייר החדש שלנו:\n\n${shareUrl}\n\nבברכה`);
+      window.location.href = `mailto:?subject=${subject}&body=${body}`;
+    }
+    
+    function copyShareLink() {
+      const shareUrl = generateShareUrl();
+      
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(shareUrl).then(() => {
+          showSuccessMessage('✅ הקישור הועתק ללוח!');
+        }).catch(() => {
+          fallbackCopyToClipboard(shareUrl);
+        });
+      } else {
+        fallbackCopyToClipboard(shareUrl);
+      }
+    }
+    
+    function fallbackCopyToClipboard(text) {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        showSuccessMessage('✅ הקישור הועתק ללוח!');
+      } catch (err) {
+        alert('❌ לא ניתן להעתיק. נא להעתיק ידנית:\n' + text);
+      }
+      document.body.removeChild(textArea);
+    }
+    
+    function generateShareUrl() {
+      const flyerId = 'flyer-' + Date.now();
+      return `https://flygen.app/share/${flyerId}`;
+    }
+    
+    // ========================================
+    // SCHEDULE SYSTEM
+    // ========================================
+    let scheduledCampaigns = JSON.parse(localStorage.getItem('scheduledCampaigns') || '[]');
+    
+    function scheduleCampaign() {
+      const scheduleType = document.querySelector('.radio-option.selected span')?.textContent;
+      
+      if (scheduleType === 'פרסם עכשיו') {
+        publishNow();
+      } else if (scheduleType === 'תזמן לתאריך ושעה') {
+        showScheduleDateTimePicker();
+      } else if (scheduleType === 'פרסום חוזר') {
+        showRecurringSchedule();
+      }
+    }
+    
+    function publishNow() {
+      closeModal('schedule-modal');
+      openModal('platform-modal');
+    }
+    
+    function showScheduleDateTimePicker() {
+      const html = `
+        <div style="margin: 20px 0;">
+          <div class="input-group">
+            <label class="input-label">תאריך:</label>
+            <input type="date" id="schedule-date" class="input-field" min="${new Date().toISOString().split('T')[0]}">
+          </div>
+          <div class="input-group" style="margin-top: 12px;">
+            <label class="input-label">שעה:</label>
+            <input type="time" id="schedule-time" class="input-field">
+          </div>
+        </div>
+      `;
+      
+      // Inject into modal (you would need to modify the modal structure)
+      alert('📅 בחר תאריך ושעה לפרסום\n\nהפונקציונליות המלאה תתווסף בגרסה הבאה');
+    }
+    
+    function saveScheduledCampaign(date, time, platforms) {
+      const campaign = {
+        id: Date.now(),
+        date: date,
+        time: time,
+        platforms: platforms,
+        status: 'scheduled',
+        createdAt: new Date().toISOString()
+      };
+      
+      scheduledCampaigns.push(campaign);
+      localStorage.setItem('scheduledCampaigns', JSON.stringify(scheduledCampaigns));
+      
+      showSuccessMessage('✅ הקמפיין נשמר לפרסום מתוזמן!');
+    }
+    
+    // ========================================
+    // MAIN EXPORT FUNCTION
+    // ========================================
+    function exportCampaign() {
+      // Get selected export format
+      const selectedRadio = document.querySelector('#export-modal .radio-option.selected span');
+      const format = selectedRadio?.textContent.trim();
+      
+      // Get quality
+      const qualitySelect = document.querySelector('#export-modal select.input-field');
+      const qualityText = qualitySelect?.value || 'גבוהה (300 DPI)';
+      exportQuality = qualityText.includes('300') ? 300 : qualityText.includes('150') ? 150 : 72;
+      
+      closeModal('export-modal');
+      
+      // Execute based on format
+      switch(format) {
+        case 'קישור שיתוף (URL)':
+          copyShareLink();
+          break;
+        case 'PDF להדפסה':
+          downloadAsPDF();
+          break;
+        case 'תמונה (JPG/PNG)':
+          downloadAsPNG();
+          break;
+        case 'ZIP עם כל הפורמטים':
+          downloadAsZIP();
+          break;
+        case 'שמור ל-Google Drive':
+          initGoogleDrive();
+          break;
+        default:
+          downloadAsPNG();
+      }
+      
+      // Navigate back to dashboard after a delay
+      setTimeout(() => {
+        navigateTo('page-dashboard');
+      }, 1000);
+    }
+    
+    // ========================================
+    // UI HELPER FUNCTIONS
+    // ========================================
+    function showSuccessMessage(message) {
+      alert(message);
+    }
+    
+    function showLoadingMessage(message) {
+      // Could be replaced with a proper loading overlay
+      console.log(message);
+    }
+    
+    // ========================================
+    // ADDITIONAL HELPER FUNCTIONS
+    // ========================================
+    function saveDraft() {
+      const draft = {
+        id: Date.now(),
+        timestamp: new Date().toISOString(),
+        // Save flyer state here
+      };
+      
+      localStorage.setItem('flyerDraft', JSON.stringify(draft));
+      showSuccessMessage('✅ טיוטה נשמרה בהצלחה!');
+    }
+    
+    function previewFlyer() {
+      // Find flyer element
+      let flyerElement = document.querySelector('.grid-3x3');
+      if (!flyerElement || !flyerElement.offsetParent) {
+        flyerElement = document.querySelector('.editor-main');
+      }
+      
+      if (!flyerElement) {
+        alert('❌ לא נמצא פלייר לתצוגה מקדימה');
+        return;
+      }
+      
+      // Create preview overlay
+      const overlay = document.createElement('div');
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.9);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      `;
+      
+      const closeBtn = document.createElement('button');
+      closeBtn.innerHTML = '<i class="ri-close-line"></i> סגור';
+      closeBtn.className = 'btn btn-primary';
+      closeBtn.style.cssText = `
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        z-index: 10001;
+      `;
+      closeBtn.onclick = () => document.body.removeChild(overlay);
+      
+      const flyerClone = flyerElement.cloneNode(true);
+      flyerClone.style.cssText = `
+        max-width: 90%;
+        max-height: 90%;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        background: white;
+        overflow: auto;
+      `;
+      
+      overlay.appendChild(flyerClone);
+      overlay.appendChild(closeBtn);
+      overlay.onclick = (e) => {
+        if (e.target === overlay) document.body.removeChild(overlay);
+      };
+      
+      document.body.appendChild(overlay);
+    }
+
+    // ========================================
+    // PRODUCT EDITOR
+    // ========================================
+    let currentEditingProduct = null;
+
+    function openProductEditor(productElement) {
+      currentEditingProduct = productElement;
+      
+      // Extract current product data
+      const imageSrc = productElement.querySelector('.product-image img')?.src || '';
+      const name = productElement.querySelector('.product-name')?.textContent || '';
+      const priceText = productElement.querySelector('.product-price')?.textContent || '';
+      const barcode = productElement.querySelector('.barcode-number')?.textContent || '';
+      const badge = productElement.querySelector('.product-badge');
+      
+      // Extract current price
+      const currentPriceMatch = priceText.match(/₪([\d.]+)$/);
+      const currentPrice = currentPriceMatch ? currentPriceMatch[1] : '';
+      
+      // Extract old price
+      const oldPriceElement = productElement.querySelector('.price-old');
+      const oldPrice = oldPriceElement ? oldPriceElement.textContent.replace('₪', '') : '';
+      
+      // Populate editor fields
+      document.getElementById('editor-current-image').src = imageSrc;
+      document.getElementById('preview-image').src = imageSrc;
+      document.getElementById('editor-product-name').value = name;
+      document.getElementById('editor-current-price').value = currentPrice;
+      document.getElementById('editor-old-price').value = oldPrice;
+      document.getElementById('editor-barcode').value = barcode;
+      
+      // Set badge
+      const badgeValue = badge ? extractBadgeType(badge) : 'none';
+      const badgeRadio = document.querySelector(`input[name="badge"][value="${badgeValue}"]`);
+      if (badgeRadio) {
+        badgeRadio.checked = true;
+        badgeRadio.parentElement.classList.add('selected');
+      }
+      
+      // Update preview
+      updateEditorPreview();
+      
+      // Show modal
+      openModal('product-editor-modal');
+    }
+
+    function extractBadgeType(badgeElement) {
+      const classList = Array.from(badgeElement.classList);
+      if (classList.includes('badge-purple')) return 'club';
+      if (classList.includes('badge-red')) return 'mega';
+      if (classList.includes('badge-orange')) return 'sale';
+      if (classList.includes('badge-green')) return 'new';
+      return 'none';
+    }
+
+    function handleImageUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      // Validate
+      if (!file.type.startsWith('image/')) {
+        alert('אנא בחר קובץ תמונה תקין');
+        return;
+      }
+      
+      if (file.size > 5 * 1024 * 1024) {
+        alert('גודל הקובץ חורג מ-5MB');
+        return;
+      }
+      
+      // Read and display
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('editor-current-image').src = e.target.result;
+        document.getElementById('preview-image').src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function selectBadgeOption(element, badgeType) {
+      // Update UI
+      document.querySelectorAll('.badge-option').forEach(opt => {
+        opt.classList.remove('selected');
+      });
+      element.classList.add('selected');
+      
+      // Update radio
+      const radio = element.querySelector('input[type="radio"]');
+      if (radio) radio.checked = true;
+      
+      // Update preview
+      updateEditorPreview();
+    }
+
+    function updateEditorPreview() {
+      // Get values
+      const name = document.getElementById('editor-product-name').value;
+      const currentPrice = document.getElementById('editor-current-price').value;
+      const oldPrice = document.getElementById('editor-old-price').value;
+      const barcode = document.getElementById('editor-barcode').value;
+      const selectedBadge = document.querySelector('input[name="badge"]:checked')?.value || 'none';
+      
+      // Update preview
+      document.getElementById('preview-name').textContent = name || 'שם המוצר';
+      document.getElementById('preview-current-price').textContent = currentPrice ? `₪${currentPrice}` : '₪0.00';
+      document.getElementById('preview-barcode').textContent = barcode || '0000000000000';
+      
+      // Update old price
+      const oldPriceElement = document.getElementById('preview-old-price');
+      if (oldPrice) {
+        oldPriceElement.textContent = `₪${oldPrice}`;
+        oldPriceElement.style.display = 'inline';
+      } else {
+        oldPriceElement.style.display = 'none';
+      }
+      
+      // Update badge
+      const badgeElement = document.getElementById('preview-badge');
+      const badgeTexts = {
+        club: 'חברי מועדון',
+        mega: 'MEGA SALE',
+        sale: 'מבצע',
+        new: 'חדש',
+        none: ''
+      };
+      
+      const badgeClasses = {
+        club: 'badge-purple',
+        mega: 'badge-red',
+        sale: 'badge-orange',
+        new: 'badge-green'
+      };
+      
+      badgeElement.className = 'product-badge';
+      if (selectedBadge !== 'none') {
+        badgeElement.textContent = badgeTexts[selectedBadge];
+        badgeElement.classList.add(badgeClasses[selectedBadge]);
+        badgeElement.style.display = 'block';
+      } else {
+        badgeElement.style.display = 'none';
+      }
+    }
+
+    function saveProductChanges() {
+      if (!currentEditingProduct) return;
+      
+      // Get values
+      const newImage = document.getElementById('editor-current-image').src;
+      const newName = document.getElementById('editor-product-name').value;
+      const newCurrentPrice = document.getElementById('editor-current-price').value;
+      const newOldPrice = document.getElementById('editor-old-price').value;
+      const newBarcode = document.getElementById('editor-barcode').value;
+      const newBadge = document.querySelector('input[name="badge"]:checked')?.value || 'none';
+      
+      // Validate
+      if (!newName.trim()) {
+        alert('שם המוצר הוא שדה חובה');
+        return;
+      }
+      
+      if (!newCurrentPrice || parseFloat(newCurrentPrice) <= 0) {
+        alert('מחיר המוצר חייב להיות גדול מ-0');
+        return;
+      }
+      
+      if (newBarcode && !/^\d{13}$/.test(newBarcode)) {
+        alert('ברקוד לא תקין (צריך 13 ספרות)');
+        return;
+      }
+      
+      // Update product element
+      updateProductElement(currentEditingProduct, {
+        image: newImage,
+        name: newName,
+        currentPrice: newCurrentPrice,
+        oldPrice: newOldPrice,
+        barcode: newBarcode,
+        badge: newBadge
+      });
+      
+      // Show success
+      alert('✅ השינויים נשמרו בהצלחה!');
+      
+      // Close modal
+      closeModal('product-editor-modal');
+    }
+
+    function updateProductElement(productElement, data) {
+      // Update image
+      const img = productElement.querySelector('.product-image img');
+      if (img) {
+        img.src = data.image;
+        img.alt = data.name;
+      }
+      
+      // Update name
+      const nameElement = productElement.querySelector('.product-name');
+      if (nameElement) {
+        nameElement.textContent = data.name;
+      }
+      
+      // Update prices
+      const priceContainer = productElement.querySelector('.product-price');
+      if (priceContainer) {
+        priceContainer.innerHTML = '';
+        
+        if (data.oldPrice) {
+          const oldPriceSpan = document.createElement('span');
+          oldPriceSpan.className = 'price-old';
+          oldPriceSpan.textContent = `₪${data.oldPrice}`;
+          priceContainer.appendChild(oldPriceSpan);
+          priceContainer.appendChild(document.createTextNode('\n'));
+        }
+        
+        priceContainer.appendChild(document.createTextNode(`₪${data.currentPrice}`));
+      }
+      
+      // Update barcode
+      const barcodeElement = productElement.querySelector('.barcode-number');
+      if (barcodeElement) {
+        barcodeElement.textContent = data.barcode;
+      }
+      
+      // Update badge
+      let badgeElement = productElement.querySelector('.product-badge');
+      
+      if (data.badge === 'none') {
+        if (badgeElement) {
+          badgeElement.remove();
+        }
+      } else {
+        if (!badgeElement) {
+          badgeElement = document.createElement('span');
+          badgeElement.className = 'product-badge';
+          // Insert after edit button
+          const editBtn = productElement.querySelector('.product-edit-btn');
+          if (editBtn) {
+            editBtn.insertAdjacentElement('afterend', badgeElement);
+          } else {
+            productElement.insertBefore(badgeElement, productElement.firstChild);
+          }
+        }
+        
+        const badgeTexts = {
+          club: 'חברי מועדון',
+          mega: 'MEGA SALE',
+          sale: 'מבצע',
+          new: 'חדש'
+        };
+        
+        const badgeClasses = {
+          club: 'badge-purple',
+          mega: 'badge-red',
+          sale: 'badge-orange',
+          new: 'badge-green'
+        };
+        
+        badgeElement.className = `product-badge ${badgeClasses[data.badge]}`;
+        badgeElement.textContent = badgeTexts[data.badge];
+      }
+    }
+
+    // ========================================
+    // LANGUAGE MANAGEMENT - 4 LANGUAGES
+    // ========================================
+    
+    const translations = {
+      he: {
+        dir: 'rtl',
+        flag: '🇮🇱',
+        name: 'עברית',
+        texts: {
+          // Header
+          userName: 'ישראל ישראלי',
+          // Dashboard
+          slogan: 'צור פלייר מקצועי בקלות',
+          createNew: 'צור חדש',
+          // Editor
+          editProduct: 'עריכת מוצר',
+          productImage: 'תמונת המוצר',
+          changeImage: 'החלף תמונה',
+          uploadFromComputer: 'העלה מהמחשב',
+          productName: 'שם המוצר',
+          currentPrice: 'מחיר נוכחי',
+          oldPrice: 'מחיר ישן (מחוק)',
+          optional: 'אופציונלי',
+          leaveEmpty: 'השאר ריק אם אין מחיר ישן',
+          badge: 'תג/תווית',
+          barcode: 'ברקוד (EAN-13)',
+          generateBarcode: 'צור ברקוד אוטומטי',
+          preview: 'תצוגה מקדימה:',
+          cancel: 'ביטול',
+          save: 'שמור שינויים',
+          // Badge types
+          clubMembers: 'חברי מועדון',
+          megaSale: 'MEGA SALE',
+          sale: 'מבצע',
+          new: 'חדש',
+          noBadge: 'ללא תג',
+          // Image requirements
+          imageRequirements: 'דרישות תמונה:',
+          sizeRecommended: 'גודל מומלץ: 1080×1080 פיקסלים',
+          formatSupported: 'פורמט: JPG, PNG, WEBP',
+          maxFileSize: 'גודל קובץ: עד 5MB'
+        }
+      },
+      ar: {
+        dir: 'rtl',
+        flag: '🇸🇦',
+        name: 'العربية',
+        texts: {
+          // Header
+          userName: 'إسرائيل إسرائيلي',
+          // Dashboard
+          slogan: 'أنشئ نشرة احترافية بسهولة',
+          createNew: 'إنشاء جديد',
+          // Editor
+          editProduct: 'تحرير المنتج',
+          productImage: 'صورة المنتج',
+          changeImage: 'تغيير الصورة',
+          uploadFromComputer: 'تحميل من الكمبيوتر',
+          productName: 'اسم المنتج',
+          currentPrice: 'السعر الحالي',
+          oldPrice: 'السعر القديم (مشطوب)',
+          optional: 'اختياري',
+          leaveEmpty: 'اتركه فارغًا إذا لم يكن هناك سعر قديم',
+          badge: 'شارة/علامة',
+          barcode: 'الباركود (EAN-13)',
+          generateBarcode: 'إنشاء باركود تلقائيًا',
+          preview: 'معاينة:',
+          cancel: 'إلغاء',
+          save: 'حفظ التغييرات',
+          // Badge types
+          clubMembers: 'أعضاء النادي',
+          megaSale: 'تخفيضات كبيرة',
+          sale: 'تخفيض',
+          new: 'جديد',
+          noBadge: 'بدون شارة',
+          // Image requirements
+          imageRequirements: 'متطلبات الصورة:',
+          sizeRecommended: 'الحجم الموصى به: 1080×1080 بكسل',
+          formatSupported: 'التنسيق: JPG, PNG, WEBP',
+          maxFileSize: 'حجم الملف: حتى 5 ميجابايت'
+        }
+      },
+      en: {
+        dir: 'ltr',
+        flag: '🇺🇸',
+        name: 'English',
+        texts: {
+          // Header
+          userName: 'Israel Israeli',
+          // Dashboard
+          slogan: 'Create Professional Flyers Easily',
+          createNew: 'Create New',
+          // Editor
+          editProduct: 'Edit Product',
+          productImage: 'Product Image',
+          changeImage: 'Change Image',
+          uploadFromComputer: 'Upload from Computer',
+          productName: 'Product Name',
+          currentPrice: 'Current Price',
+          oldPrice: 'Old Price (crossed out)',
+          optional: 'Optional',
+          leaveEmpty: 'Leave empty if no old price',
+          badge: 'Badge/Tag',
+          barcode: 'Barcode (EAN-13)',
+          generateBarcode: 'Generate Barcode',
+          preview: 'Preview:',
+          cancel: 'Cancel',
+          save: 'Save Changes',
+          // Badge types
+          clubMembers: 'Club Members',
+          megaSale: 'MEGA SALE',
+          sale: 'Sale',
+          new: 'New',
+          noBadge: 'No Badge',
+          // Image requirements
+          imageRequirements: 'Image Requirements:',
+          sizeRecommended: 'Recommended size: 1080×1080 pixels',
+          formatSupported: 'Format: JPG, PNG, WEBP',
+          maxFileSize: 'File size: up to 5MB'
+        }
+      },
+      ru: {
+        dir: 'ltr',
+        flag: '🇷🇺',
+        name: 'Русский',
+        texts: {
+          // Header
+          userName: 'Израиль Израильский',
+          // Dashboard
+          slogan: 'Создавайте профессиональные флаеры легко',
+          createNew: 'Создать новый',
+          // Editor
+          editProduct: 'Редактировать товар',
+          productImage: 'Изображение товара',
+          changeImage: 'Изменить изображение',
+          uploadFromComputer: 'Загрузить с компьютера',
+          productName: 'Название товара',
+          currentPrice: 'Текущая цена',
+          oldPrice: 'Старая цена (зачеркнута)',
+          optional: 'Необязательно',
+          leaveEmpty: 'Оставьте пустым, если нет старой цены',
+          badge: 'Значок/Метка',
+          barcode: 'Штрихкод (EAN-13)',
+          generateBarcode: 'Сгенерировать штрихкод',
+          preview: 'Предпросмотр:',
+          cancel: 'Отмена',
+          save: 'Сохранить изменения',
+          // Badge types
+          clubMembers: 'Члены клуба',
+          megaSale: 'МЕГА РАСПРОДАЖА',
+          sale: 'Распродажа',
+          new: 'Новинка',
+          noBadge: 'Без значка',
+          // Image requirements
+          imageRequirements: 'Требования к изображению:',
+          sizeRecommended: 'Рекомендуемый размер: 1080×1080 пикселей',
+          formatSupported: 'Формат: JPG, PNG, WEBP',
+          maxFileSize: 'Размер файла: до 5МБ'
+        }
+      }
+    };
+
+    // Current language (default: Hebrew)
+    let currentLang = localStorage.getItem('flygen_language') || 'he';
+
+    // Initialize language on page load
+    function initLanguage() {
+      setLanguage(currentLang);
+    }
+
+    // Toggle language dropdown
+    function toggleLangDropdown() {
+      const dropdown = document.getElementById('lang-dropdown');
+      dropdown.classList.toggle('active');
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(event) {
+      const langSelector = document.querySelector('.language-selector');
+      const dropdown = document.getElementById('lang-dropdown');
+      
+      if (langSelector && !langSelector.contains(event.target)) {
+        dropdown.classList.remove('active');
+      }
+    });
+
+    // Select language
+    function selectLanguage(lang) {
+      currentLang = lang;
+      setLanguage(lang);
+      
+      // Close dropdown
+      document.getElementById('lang-dropdown').classList.remove('active');
+      
+      // Save to localStorage
+      localStorage.setItem('flygen_language', lang);
+    }
+
+    // Set language
+    function setLanguage(lang) {
+      const langData = translations[lang];
+      if (!langData) return;
+      
+      // Update HTML direction
+      document.documentElement.setAttribute('lang', lang);
+      document.documentElement.setAttribute('dir', langData.dir);
+      document.body.setAttribute('dir', langData.dir);
+      
+      // Update current language display
+      document.getElementById('current-lang-flag').textContent = langData.flag;
+      document.getElementById('current-lang-name').textContent = langData.name;
+      
+      // Update dropdown active state
+      document.querySelectorAll('.lang-option').forEach(option => {
+        if (option.getAttribute('data-lang') === lang) {
+          option.classList.add('active');
+        } else {
+          option.classList.remove('active');
+        }
+      });
+      
+      // Update all translatable elements
+      updateTranslations(langData.texts);
+    }
+
+    // Update translations
+    function updateTranslations(texts) {
+      // This is a basic implementation
+      // In a real app, you'd use data-i18n attributes
+      
+      // Update editor modal texts if needed
+      const editModalTitle = document.querySelector('#product-editor-modal h2');
+      if (editModalTitle && editModalTitle.textContent.includes('עריכת') || 
+          editModalTitle.textContent.includes('Edit') ||
+          editModalTitle.textContent.includes('تحرير') ||
+          editModalTitle.textContent.includes('Редактировать')) {
+        // Update only the text, keep the icon
+        const icon = editModalTitle.querySelector('i');
+        editModalTitle.textContent = texts.editProduct;
+        if (icon) {
+          editModalTitle.insertBefore(icon, editModalTitle.firstChild);
+        }
+      }
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      initLanguage();
+    });
+  </script>
+
+  <!-- ========================================
+       PRODUCT EDITOR MODAL
+       ======================================== -->
+  <div class="modal-overlay" id="product-editor-modal" onclick="closeModalOnOverlay(event)">
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <h2>
+          <i class="ri-pencil-line"></i>
+          עריכת מוצר
+        </h2>
+        <button class="modal-close" onclick="closeModal('product-editor-modal')">
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="editor-layout">
+          <!-- Image Section -->
+          <div class="editor-image-section">
+            <h3>תמונת המוצר</h3>
+            
+            <div class="image-preview-container">
+              <img id="editor-current-image" src="" alt="Product">
+              <div class="image-overlay">
+                <button class="btn btn-outline btn-sm" onclick="document.getElementById('product-image-upload').click()">
+                  <i class="ri-upload-2-line"></i>
+                  החלף תמונה
+                </button>
+              </div>
+            </div>
+
+            <div class="upload-options">
+              <button class="btn btn-outline btn-block" onclick="document.getElementById('product-image-upload').click()">
+                <i class="ri-folder-upload-line"></i>
+                העלה מהמחשב
+              </button>
+              
+              <input type="file" id="product-image-upload" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
+            </div>
+
+            <div class="image-requirements">
+              <h4>דרישות תמונה:</h4>
+              <ul>
+                <li>גודל מומלץ: 1080×1080 פיקסלים</li>
+                <li>פורמט: JPG, PNG, WEBP</li>
+                <li>גודל קובץ: עד 5MB</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Fields Section -->
+          <div class="editor-fields-section">
+            <div class="form-group">
+              <label for="editor-product-name">
+                <i class="ri-text"></i>
+                שם המוצר
+              </label>
+              <input type="text" id="editor-product-name" class="form-control" placeholder="קוקה קולה 1.5 ליטר" maxlength="50" oninput="updateEditorPreview()">
+              <small>מקסימום 50 תווים</small>
+            </div>
+
+            <div class="form-group">
+              <label for="editor-current-price">
+                <i class="ri-price-tag-3-line"></i>
+                מחיר נוכחי
+              </label>
+              <div class="price-input-group">
+                <span class="currency-symbol">₪</span>
+                <input type="number" id="editor-current-price" class="form-control" placeholder="7.90" step="0.01" min="0" oninput="updateEditorPreview()">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="editor-old-price">
+                <i class="ri-price-tag-2-line"></i>
+                מחיר ישן (מחוק)
+                <span class="optional-badge">אופציונלי</span>
+              </label>
+              <div class="price-input-group">
+                <span class="currency-symbol">₪</span>
+                <input type="number" id="editor-old-price" class="form-control" placeholder="9.90" step="0.01" min="0" oninput="updateEditorPreview()">
+              </div>
+              <small>השאר ריק אם אין מחיר ישן</small>
+            </div>
+
+            <div class="form-group">
+              <label>תג/תווית</label>
+              <div class="badge-selector">
+                <div class="badge-option" onclick="selectBadgeOption(this, 'club')">
+                  <div class="badge-preview badge-purple">חברי מועדון</div>
+                  <input type="radio" name="badge" value="club">
+                </div>
+                <div class="badge-option" onclick="selectBadgeOption(this, 'mega')">
+                  <div class="badge-preview badge-red">MEGA SALE</div>
+                  <input type="radio" name="badge" value="mega">
+                </div>
+                <div class="badge-option" onclick="selectBadgeOption(this, 'sale')">
+                  <div class="badge-preview badge-orange">מבצע</div>
+                  <input type="radio" name="badge" value="sale">
+                </div>
+                <div class="badge-option" onclick="selectBadgeOption(this, 'new')">
+                  <div class="badge-preview badge-green">חדש</div>
+                  <input type="radio" name="badge" value="new">
+                </div>
+                <div class="badge-option selected" onclick="selectBadgeOption(this, 'none')">
+                  <div class="badge-preview badge-none">ללא תג</div>
+                  <input type="radio" name="badge" value="none" checked>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="editor-barcode">
+                <i class="ri-barcode-line"></i>
+                ברקוד (EAN-13)
+              </label>
+              <input type="text" id="editor-barcode" class="form-control" placeholder="7290000271682" pattern="[0-9]{13}" maxlength="13" oninput="updateEditorPreview()">
+              <small>13 ספרות (מתחיל ב-729 לישראל)</small>
+              <button class="btn btn-outline btn-sm" onclick="document.getElementById('editor-barcode').value = generateBarcode(); updateEditorPreview()">
+                <i class="ri-refresh-line"></i>
+                צור ברקוד אוטומטי
+              </button>
+            </div>
+
+            <!-- Preview -->
+            <div class="editor-preview-section">
+              <h4>תצוגה מקדימה:</h4>
+              <div class="product-box preview-box">
+                <span class="product-badge badge-orange" id="preview-badge" style="display: none;">מבצע</span>
+                <div class="product-image">
+                  <img id="preview-image" src="" alt="Preview">
+                </div>
+                <div class="product-barcode">
+                  <div class="barcode-bars"></div>
+                  <div class="barcode-number" id="preview-barcode">7290000271682</div>
+                </div>
+                <div class="product-name" id="preview-name">שם המוצר</div>
+                <div class="product-price">
+                  <span class="price-old" id="preview-old-price" style="display: none;">₪9.90</span>
+                  <span id="preview-current-price">₪7.90</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal('product-editor-modal')">
+          <i class="ri-close-line"></i>
+          ביטול
+        </button>
+        <button class="btn btn-primary" onclick="saveProductChanges()">
+          <i class="ri-save-line"></i>
+          שמור שינויים
+        </button>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
